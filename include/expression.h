@@ -56,30 +56,26 @@ struct Node{
     Node* right;
 };
 
-struct KnownVariables{
+/*struct KnownVariables{
     uint32_t bitmask;
     double values[32];
-};
+};*/
 
-typedef Node* (*DerivativeFunction)(Node*);
 
-typedef Node* (*CalculationFunction)(Node*, KnownVariables*);
+//typedef Node* (*CalculationFunction)(Node*, KnownVariables*);
 
 struct Function{
     char name[8];
     UnaryFunction functionType;
-    DerivativeFunction getDerivative;
-    CalculationFunction getValue;
+    //CalculationFunction getValue;
 };
 
 
 
 Function functions[] = {
-    {"exp", EXP, getExponentDerivative, }
+    {"exp", EXP},
+    {"ln", LN}
 };
-
-Node* getExponentDerivative(Node*);
-
 
 struct ReaderData{
     const char* buffer;

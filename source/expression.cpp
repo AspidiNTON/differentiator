@@ -186,50 +186,62 @@ Node* getDerivative(Node* node, char variableName){
             if (node->data.variableName == variableName) return createConstNode(1);
             else return createConstNode(0);
         case BINARY_OPERATOR:
-            {
-                switch (node->data.operatorType){
-                    case ADD:
-                        Node* result = createOperatorNode(ADD);
-                        result->left = getDerivative(node->left, variableName);
-                        result->right = getDerivative(node->right, variableName);
-                        return result;
-                    case SUB:
-                        Node* result = createOperatorNode(SUB);
-                        result->left = getDerivative(node->left, variableName);
-                        result->right = getDerivative(node->right, variableName);
-                        return result;
-                    case MUL:
-                        Node* result = createOperatorNode(SUB);
-                        result->left = createOperatorNode(MUL);
-                        result->right = createOperatorNode(MUL);
-                        result->left->left = getDerivative(node->left, variableName);
-                        result->left->right = createNodeCopy(node->right);
-                        result->right->left = createNodeCopy(node->left);
-                        result->right->right = getDerivative(node->right, variableName);
-                        return result;
-                    case DIV:
-
-                    case POW:
-                    
-                    default:
-                        printErr("hell nah bro wtf do you want from me\n");
-                        return NULL;
-                }
-
-            }
+            return getOperatorDerivative(node, variableName);
+        case UNARY_FUNCTION:    
+            return getFunctionDerivative(node, variableName);
+        default:
+            printErr("How did we get here?\n");
+            return NULL;
     }
 }
 
+Node* getOperatorDerivative(Node* node, char variableName){
+    Node* result;
+    switch (node->data.operatorType){   
+        case ADD:
+            result = createOperatorNode(ADD);
+            result->left = getDerivative(node->left, variableName);
+            result->right = getDerivative(node->right, variableName);
+            return result;
+        case SUB:
+            result = createOperatorNode(SUB);
+            result->left = getDerivative(node->left, variableName);
+            result->right = getDerivative(node->right, variableName);
+            return result;
+        case MUL:
+            result = createOperatorNode(ADD);
+            result->left = createOperatorNode(MUL);
+            result->right = createOperatorNode(MUL);
+            result->left->left = getDerivative(node->left, variableName);
+            result->left->right = createNodeCopy(node->right);
+            result->right->left = createNodeCopy(node->left);
+            result->right->right = getDerivative(node->right, variableName);
+            return result;
+        case DIV:
 
-
-/*Node* getExponentDerivative(Node* node){
-    return createNodeCopy(node);
+        case POW:
+        
+        default:
+            printErr("hell nah bro wtf do you want from me\n");
+            return NULL;
+    }
 }
 
-
-Node* getNaturalLogarithmDerivative(Node* node){
-    Node* result = createOperatorNode(DIV);
-    result->left = createConstNode(1);
-    result->right = createNodeCopy(node);
-    return result;
-}*/
+Node* getFunctionDerivative(Node* node, char variableName){
+    Node* result;
+    switch (node->data.functionType){
+        case EXP:
+            result = createOperatorNode(MUL);
+            result->left = createNodeCopy(node);
+            result->right = getDerivative(node, variableName);
+            return result;
+        case LN:
+            result = createOperatorNode(DIV);
+            result->left = getDerivative(node, variableName);
+            result->right = createNodeCopy(node);
+            return result;
+        default:
+            printErr("I ain't even got a function for this one man what the hell\n");
+            return NULL;
+    }
+}
