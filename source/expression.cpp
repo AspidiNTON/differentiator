@@ -158,9 +158,10 @@ Node* getFunction(ReaderData* str){
     if (str->index != prevIndex) return node;
     if (cur(str) >= 'a' && cur(str) <= 'z' &&
       !(str->buffer[str->index + 1] >= 'a' &&
-        str->buffer[str->index + 1] <= 'z')) 
-    {
+        str->buffer[str->index + 1] <= 'z'))
         return createVariableNode(cur(str));
+    else {
+
     }
 }
 
@@ -172,3 +173,63 @@ Node* getNumber(ReaderData* str){
     }
     return createConstNode(number);
 }
+
+Node* getDerivative(Node* node, char variableName){
+    if (node == NULL) {
+        printErr("Nullptr node recieved\n");
+        return NULL;
+    }
+    switch (node->type){
+        case CONST_TYPE:
+            return createConstNode(0);
+        case VARIABLE_TYPE:
+            if (node->data.variableName == variableName) return createConstNode(1);
+            else return createConstNode(0);
+        case BINARY_OPERATOR:
+            {
+                switch (node->data.operatorType){
+                    case ADD:
+                        Node* result = createOperatorNode(ADD);
+                        result->left = getDerivative(node->left, variableName);
+                        result->right = getDerivative(node->right, variableName);
+                        return result;
+                    case SUB:
+                        Node* result = createOperatorNode(SUB);
+                        result->left = getDerivative(node->left, variableName);
+                        result->right = getDerivative(node->right, variableName);
+                        return result;
+                    case MUL:
+                        Node* result = createOperatorNode(SUB);
+                        result->left = createOperatorNode(MUL);
+                        result->right = createOperatorNode(MUL);
+                        result->left->left = getDerivative(node->left, variableName);
+                        result->left->right = createNodeCopy(node->right);
+                        result->right->left = createNodeCopy(node->left);
+                        result->right->right = getDerivative(node->right, variableName);
+                        return result;
+                    case DIV:
+
+                    case POW:
+                    
+                    default:
+                        printErr("hell nah bro wtf do you want from me\n");
+                        return NULL;
+                }
+
+            }
+    }
+}
+
+
+
+/*Node* getExponentDerivative(Node* node){
+    return createNodeCopy(node);
+}
+
+
+Node* getNaturalLogarithmDerivative(Node* node){
+    Node* result = createOperatorNode(DIV);
+    result->left = createConstNode(1);
+    result->right = createNodeCopy(node);
+    return result;
+}*/
