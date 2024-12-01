@@ -70,15 +70,6 @@ struct Function{
     //CalculationFunction getValue;
 };
 
-
-
-Function functions[] = {
-    {"exp", EXP},
-    {"ln", LN},
-    {"sin", SIN},
-    {"cos", COS}
-};
-
 struct ReaderData{
     const char* buffer;
     int index;
@@ -96,10 +87,28 @@ Node* createFunctionNode(UnaryFunction functionType);
 
 void destroyNode(Node* node);
 
+Node* createNodeCopy(Node*);
+
 Node* readExpressionFromFile(const char* filename);
 
 Node* getExpression(ReaderData*);
 
-Node* createNodeCopy(Node*);
+Node* getSummand(ReaderData* str);
+
+Node* getMultiplier(ReaderData* str);
+
+Node* getBrackets(ReaderData* str);
+
+Node* getFunction(ReaderData* str);
+
+Node* getNumber(ReaderData* str);
+
+Node* getDerivative(Node* node, char variableName);
+
+Node* getOperatorDerivative(Node* node, char variableName);
+
+Node* getFunctionDerivative(Node* node, char variableName);
+
+
 
 #endif

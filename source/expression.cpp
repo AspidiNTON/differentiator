@@ -4,6 +4,12 @@
 
 #define inc(str) ++str->index // increase index by 1
 
+Function functions[] = {
+    {"exp", EXP},
+    {"ln", LN},
+    {"sin", SIN},
+    {"cos", COS}
+};
 
 Node* createNode(NodeType type, NodeData data, Node* left, Node* right){
     Node* node = (Node*)calloc(1, sizeof(Node));
@@ -143,15 +149,8 @@ Node* getBrackets(ReaderData* str){
         inc(str);
         return node;
     } else {
-        inc(str);
         return getFunction(str);
     }
-}
-
-bool checkFunctionName(const char* buff, const char* functionName){
-    int i = 0;
-    while (buff[i] == functionName[i]) ++i;
-    return functionName[i] == '\0';
 }
 
 
@@ -163,7 +162,7 @@ Node* getFunction(ReaderData* str){
         str->buffer[str->index + 1] <= 'z'))
         return createVariableNode(cur(str));
     else {
-        for (int i = 0; i < sizeof(functions) / sizeof(functions[0]); ++i) {
+        for (int i = 0; i < (int)(sizeof(functions) / sizeof(functions[0])); ++i) {
             int j = 0;
             while (str->buffer[str->index + j] == functions[i].name[j] && functions[i].name[j] != '\0') ++j;
             if (functions[i].name[j] == '\0'){
