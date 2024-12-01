@@ -74,7 +74,9 @@ struct Function{
 
 Function functions[] = {
     {"exp", EXP},
-    {"ln", LN}
+    {"ln", LN},
+    {"sin", SIN},
+    {"cos", COS}
 };
 
 struct ReaderData{

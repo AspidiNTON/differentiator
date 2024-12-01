@@ -1,14 +1,14 @@
 CC = g++
-CFLAGS = -c -Wall -DDEBUG
+CFLAGS = -c -Wall# -DDEBUG
 SRC_DIR = source
 INC_DIR = include
 OBJ_DIR = object
-LOG_DIR = logger
+#LOG_DIR = logger
 SOURCES := $(wildcard $(SRC_DIR)/*.cpp)
 INCLUDES := $(wildcard $(INC_DIR)/*.h)
 OBJECTS := $(SOURCES:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 EXECUTABLE = myprogram
-LOGGER_HTML = listLog
+#LOGGER_HTML = listLog
 
 all: $(EXECUTABLE)
 
@@ -21,8 +21,8 @@ $(OBJECTS): $(OBJ_DIR)/%.o : $(SRC_DIR)/%.cpp $(OBJ_DIR) $(LOG_DIR)
 $(OBJ_DIR):
 	@mkdir $(OBJ_DIR)
 	
-$(LOG_DIR):
-	@mkdir $(LOG_DIR)
+#$(LOG_DIR):
+#	@mkdir $(LOG_DIR)
 
 run: $(EXECUTABLE)
 	@./$(EXECUTABLE)
@@ -30,5 +30,3 @@ run: $(EXECUTABLE)
 clean:
 	@del $(OBJ_DIR)\* /F /Q
 	@del $(LOG_DIR)\* /F /Q
-	@del $(EXECUTABLE).exe
-	@del $(LOGGER_HTML).html

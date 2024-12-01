@@ -144,33 +144,48 @@ Node* getBrackets(ReaderData* str){
         return node;
     } else {
         inc(str);
-
-
-
-
+        return getFunction(str);
     }
+}
+
+bool checkFunctionName(const char* buff, const char* functionName){
+    int i = 0;
+    while (buff[i] == functionName[i]) ++i;
+    return functionName[i] == '\0';
 }
 
 
 Node* getFunction(ReaderData* str){
-    int prevIndex = str->index;
     Node* node = getNumber(str);
-    if (str->index != prevIndex) return node;
+    if (node != NULL) return node;
     if (cur(str) >= 'a' && cur(str) <= 'z' &&
       !(str->buffer[str->index + 1] >= 'a' &&
         str->buffer[str->index + 1] <= 'z'))
         return createVariableNode(cur(str));
     else {
-
+        for (int i = 0; i < sizeof(functions) / sizeof(functions[0]); ++i) {
+            int j = 0;
+            while (str->buffer[str->index + j] == functions[i].name[j] && functions[i].name[j] != '\0') ++j;
+            if (functions[i].name[j] == '\0'){
+                str->index += j;
+                node = createFunctionNode(functions[i].functionType);
+                node->right = getBrackets(str);
+                return node;
+            }
+        }
+        printErr("Invalid function at: %10s...\n", str->buffer + str->index);
+        return NULL;
     }
 }
 
 Node* getNumber(ReaderData* str){
+    int prevIndex = str->index;
     int number = 0;
     while (cur(str) >= '0' && cur(str) <= '9') {
         number = number * 10 + (cur(str) - '0');
         inc(str);
     }
+    if (prevIndex == str->index) return NULL;
     return createConstNode(number);
 }
 
