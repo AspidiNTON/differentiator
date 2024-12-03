@@ -4,20 +4,33 @@
 
 #define inc(str) ++str->index // increase index by 1
 
-const char* functionNames[] = {
+Function functions[] = {
+    {"exp", EXP},
+    {"ln", LN},
+    {"sin", SIN},
+    {"cos", COS},
+    {"tan", TAN},
+};
+
+const char *const functionNames[] = {
     "exp",
     "ln",
     "sin",
     "cos",
     "tan",
-    "cot"
-};
-
-Function functions[] = {
-    {"exp", EXP},
-    {"ln", LN},
-    {"sin", SIN},
-    {"cos", COS}
+    /*"cot"
+    "arcsin",
+    "arccos",
+    "arctan",
+    "arccot",
+    "sinh",
+    "cosh",
+    "tanh",
+    "coth",
+    "arcsinh",
+    "arccosh",
+    "arctanh",
+    "arccoth"*/
 };
 
 Node* createNode(NodeType type, NodeData data, Node* left, Node* right){
@@ -100,7 +113,6 @@ Node* readExpressionFromFile(const char* filename){
     if (str.buffer == NULL) return NULL;
     str.index = 0;
     Node* tree = getExpression(&str);
-    printf("%c\n", str.buffer[str.index]);
     if (str.buffer[str.index] != '$') {
         free((void*)str.buffer);
         printErr("Expression must be terminated by '$' symbol\n");
@@ -111,7 +123,6 @@ Node* readExpressionFromFile(const char* filename){
 }
 
 Node* getExpression(ReaderData* str){
-    //printf("%s, %d\n", __func__, str->index);
     Node* first = getSummand(str);
     while (cur(str) == '+' || cur(str) == '-') {
         NodeData unionSucks;
@@ -125,7 +136,6 @@ Node* getExpression(ReaderData* str){
 }
 
 Node* getSummand(ReaderData* str){
-    //printf("%s, %d\n", __func__, str->index);
     Node* first = getMultiplier(str);
     while (cur(str) == '*' || cur(str) == '/') {
         NodeData unionSucks;
@@ -139,7 +149,6 @@ Node* getSummand(ReaderData* str){
 }
 
 Node* getMultiplier(ReaderData* str){
-    //printf("%s, %d\n", __func__, str->index);
     Node* first = getBrackets(str);
     while (cur(str) == '^') {
         NodeData unionSucks;
@@ -152,7 +161,6 @@ Node* getMultiplier(ReaderData* str){
 }
 
 Node* getBrackets(ReaderData* str){
-    //printf("%s, %d\n", __func__, str->index);
     if (cur(str) == '('){
         inc(str);
         Node* node = getExpression(str);
@@ -169,7 +177,6 @@ Node* getBrackets(ReaderData* str){
 
 
 Node* getFunction(ReaderData* str){
-    //printf("%s, %d\n", __func__, str->index);
     Node* node = getNumber(str);
     if (node != NULL) return node;
     if (cur(str) >= 'a' && cur(str) <= 'z' &&
@@ -192,7 +199,6 @@ Node* getFunction(ReaderData* str){
 }
 
 Node* getNumber(ReaderData* str){
-    //printf("%s, %d\n", __func__, str->index);
     int prevIndex = str->index;
     int number = 0;
     while (cur(str) >= '0' && cur(str) <= '9') {
@@ -287,7 +293,6 @@ Node* getOperatorDerivative(Node* node, char variableName){
 }
 
 Node* getFunctionDerivative(Node* node, char variableName){
-    //printExpression(stdout, node); putchar('\n');
     Node* result;
     switch (node->data.functionType){
         case EXP:
@@ -306,39 +311,212 @@ Node* getFunctionDerivative(Node* node, char variableName){
             result->left->right = createNodeCopy(node->right);
             result->right = getDerivative(node->right, variableName);
             return result;
+        case COS:
+            result = createOperatorNode(MUL);
+            result->left = createFunctionNode(SIN);
+            result->left->right = createNodeCopy(node->right);
+            result->right = createOperatorNode(MUL);
+            result->right->left = createConstNode(-1);
+            result->right->right = getDerivative(node->right, variableName);
+            return result;
+        case TAN:
+            result = createOperatorNode(MUL);
+            result->left = getDerivative(node, variableName);
+            result->right = createOperatorNode(POW);
+            result->right->left = createNodeCopy(node->right);
+            result->right->right = createConstNode(-2);
+            return result;
         default:
             printErr("I ain't even got a derivative for this one man what the hell\n");
             return NULL;
     }
 }
 
-void printNode(FILE* filePtr, Node* node){
+
+
+int getOperationPriority(Node* node){
+    if (node == NULL) return -1;
+    if (node->type != BINARY_OPERATOR) return 0;
+    else {
+        if (node->data.operatorType == POW) return 1;
+        if (node->data.operatorType == MUL || node->data.operatorType == DIV) return 2;
+        if (node->data.operatorType == ADD || node->data.operatorType == SUB) return 3;
+    }
+    return -1;
+}
+
+void printNode(FILE* filePtr, Node* node, bool latex){
     if (node == NULL || filePtr == NULL) return;
     switch (node->type){
         case CONST_TYPE:
-            printf("%lg", node->data.constValue);
+            fprintf(filePtr, "%lg", node->data.constValue);
             break;
         case VARIABLE_TYPE:
-            putchar(node->data.variableName);
+            putc(node->data.variableName, filePtr);
             break;
         case BINARY_OPERATOR:
-            putchar(operatorNames[node->data.operatorType]);
+            putc(operatorNames[node->data.operatorType], filePtr);
             break;
         case UNARY_FUNCTION:
-            printf("%s", functionNames[node->data.functionType]);
+            fprintf(filePtr, "%s", functionNames[node->data.functionType]);
             break;
         default:
             printErr("Erm whatthesigma\n");
     }
 }
 
-void printExpression(FILE* filePtr, Node* node){
+
+void printExpression(FILE* filePtr, Node* node, bool latex){
     if (node == NULL || filePtr == NULL) return;
-    if (node->left != NULL && node->right != NULL) putchar('(');
-    if (node->left != NULL) printExpression(filePtr, node->left);
-    printNode(filePtr, node);
-    if (node->right != NULL) printExpression(filePtr, node->right);
-    if (node->left != NULL && node->right != NULL) putchar(')');
+    if (node->type == VARIABLE_TYPE || node->type == CONST_TYPE) {
+        printNode(filePtr, node, latex);
+        return;
+    }
+    if (node->type == UNARY_FUNCTION) {
+        printNode(filePtr, node, latex);
+        if (node->right->type != CONST_TYPE && node->right->type != VARIABLE_TYPE) {
+            putc('(', filePtr);
+            printExpression(filePtr, node->right, latex);
+            putc(')', filePtr);
+        } else printExpression(filePtr, node->right, latex);
+        return;
+    }
+
+    if (latex && node->data.operatorType == DIV){
+        fprintf(filePtr, "\\frac{");
+        printExpression(filePtr, node->left, latex);
+        fprintf(filePtr, "}{");
+        printExpression(filePtr, node->right, latex);
+        putc('}', filePtr);
+        return;
+    }
+
+    if (getOperationPriority(node->left) > getOperationPriority(node) || (getOperationPriority(node) == 1 && getOperationPriority(node->left) == 1)) {
+        putc('(', filePtr);
+        printExpression(filePtr, node->left, latex);
+        putc(')', filePtr);
+    } else printExpression(filePtr, node->left, latex);
+
+    printNode(filePtr, node, latex);
+
+    if (getOperationPriority(node->right) > getOperationPriority(node) || (getOperationPriority(node) == 1 && getOperationPriority(node->right) == 1)) {
+        putc('(', filePtr);
+        printExpression(filePtr, node->right, latex);
+        putc(')', filePtr);
+    } else printExpression(filePtr, node->right, latex);
 }
 
 
+
+
+bool isZero(Node* node) {
+    if (node == NULL) return false;
+    return node->type == CONST_TYPE && node->data.constValue == 0;
+}
+
+bool isOne(Node* node) {
+    if (node == NULL) return false;
+    return node->type == CONST_TYPE && node->data.constValue == 1;
+}
+
+bool isNumber(Node* node){
+    if (node == NULL) return false;
+    return node->type == CONST_TYPE;
+}
+
+#define value(node) node->data.constValue
+
+Node* simplifyExpression(Node* node){
+    if (node == NULL) return NULL;
+
+    if (node->type == CONST_TYPE || node->type == VARIABLE_TYPE) return createNodeCopy(node);
+
+    // TODO calculate actual value if function argument is const
+    if (node->type == UNARY_FUNCTION) return createNodeCopy(node);
+
+
+    Node* result = NULL;
+    Node* left = simplifyExpression(node->left);
+    Node* right = simplifyExpression(node->right);
+    bool positive = false;
+    switch (node->data.operatorType) {
+    case ADD:
+        positive = true;
+    case SUB:
+        if (isNumber(left) && isNumber(right)) {
+            if (positive) result = createConstNode(value(left) + value(right));
+            else result = createConstNode(value(left) - value(right));
+            destroyNode(left);
+            destroyNode(right);
+        }
+        else if (isZero(left)) {
+            if (positive) result = right;
+            else {
+                result = createOperatorNode(MUL);
+                result->left = createConstNode(-1);
+                result->right = right;
+            }
+            destroyNode(left);
+        }
+        else if (isZero(right)) {
+            result = left;
+            destroyNode(right);
+        }
+        break;
+    case MUL:
+        if (isNumber(left) && isNumber(right)) {
+            result = createConstNode(left->data.constValue * right->data.constValue);
+            destroyNode(left);
+            destroyNode(right);
+        } else if (isZero(left)){
+            result = left;
+            destroyNode(right);
+        } else if (isZero(right)){
+            result = right;
+            destroyNode(left);
+        } else if (isOne(left)){
+            result = right;
+            destroyNode(left);
+        } else if (isOne(right)){
+            result = left;
+            destroyNode(right);
+        }
+        break;
+    case DIV:
+        if (isZero(right)) {
+            printErr("Erm... division by zero\n");
+            break;
+        }
+        if (isNumber(left) && isNumber(right)) {
+            result = createConstNode(left->data.constValue / right->data.constValue);
+            destroyNode(left);
+            destroyNode(right);
+        } else if (isZero(left)){
+            result = left;
+            destroyNode(right);
+        } else if (isOne(right)){
+            result = left;
+            destroyNode(right);
+        }
+        break;
+    case POW:
+        if (isZero(left) || isOne(left) || isOne(right)){
+            destroyNode(right);
+            result = left;  
+        } else if (isZero(right)){
+            destroyNode(left);
+            destroyNode(right);
+            result = createConstNode(1);
+        }
+        break;
+    default:
+        printErr("That operator is pretty bad yk?\n");
+        break;
+    }
+    if (result == NULL) {
+        result = createOperatorNode(node->data.operatorType);
+        result->left = left;
+        result->right = right;
+    }
+    return result;
+}

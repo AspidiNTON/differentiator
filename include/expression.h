@@ -23,6 +23,8 @@ enum BinaryOperator{
 
 const char operatorNames[] = "+-*/^";
 
+extern const char *const functionNames[];
+
 enum UnaryFunction{
     EXP,
     LN,
@@ -111,8 +113,8 @@ Node* getOperatorDerivative(Node* node, char variableName);
 
 Node* getFunctionDerivative(Node* node, char variableName);
 
-void printExpression(FILE* filePtr, Node* node);
+void printExpression(FILE* filePtr, Node* node, bool latex);
 
-
+Node* simplifyExpression(Node* node);
 
 #endif
