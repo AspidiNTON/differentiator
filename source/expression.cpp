@@ -4,6 +4,15 @@
 
 #define inc(str) ++str->index // increase index by 1
 
+const char* functionNames[] = {
+    "exp",
+    "ln",
+    "sin",
+    "cos",
+    "tan",
+    "cot"
+};
+
 Function functions[] = {
     {"exp", EXP},
     {"ln", LN},
@@ -91,6 +100,7 @@ Node* readExpressionFromFile(const char* filename){
     if (str.buffer == NULL) return NULL;
     str.index = 0;
     Node* tree = getExpression(&str);
+    printf("%c\n", str.buffer[str.index]);
     if (str.buffer[str.index] != '$') {
         free((void*)str.buffer);
         printErr("Expression must be terminated by '$' symbol\n");
@@ -101,6 +111,7 @@ Node* readExpressionFromFile(const char* filename){
 }
 
 Node* getExpression(ReaderData* str){
+    //printf("%s, %d\n", __func__, str->index);
     Node* first = getSummand(str);
     while (cur(str) == '+' || cur(str) == '-') {
         NodeData unionSucks;
@@ -114,6 +125,7 @@ Node* getExpression(ReaderData* str){
 }
 
 Node* getSummand(ReaderData* str){
+    //printf("%s, %d\n", __func__, str->index);
     Node* first = getMultiplier(str);
     while (cur(str) == '*' || cur(str) == '/') {
         NodeData unionSucks;
@@ -127,6 +139,7 @@ Node* getSummand(ReaderData* str){
 }
 
 Node* getMultiplier(ReaderData* str){
+    //printf("%s, %d\n", __func__, str->index);
     Node* first = getBrackets(str);
     while (cur(str) == '^') {
         NodeData unionSucks;
@@ -139,6 +152,7 @@ Node* getMultiplier(ReaderData* str){
 }
 
 Node* getBrackets(ReaderData* str){
+    //printf("%s, %d\n", __func__, str->index);
     if (cur(str) == '('){
         inc(str);
         Node* node = getExpression(str);
@@ -155,12 +169,12 @@ Node* getBrackets(ReaderData* str){
 
 
 Node* getFunction(ReaderData* str){
+    //printf("%s, %d\n", __func__, str->index);
     Node* node = getNumber(str);
     if (node != NULL) return node;
     if (cur(str) >= 'a' && cur(str) <= 'z' &&
       !(str->buffer[str->index + 1] >= 'a' &&
-        str->buffer[str->index + 1] <= 'z'))
-        return createVariableNode(cur(str));
+        str->buffer[str->index + 1] <= 'z')) return createVariableNode(str->buffer[str->index++]);
     else {
         for (int i = 0; i < (int)(sizeof(functions) / sizeof(functions[0])); ++i) {
             int j = 0;
@@ -178,6 +192,7 @@ Node* getFunction(ReaderData* str){
 }
 
 Node* getNumber(ReaderData* str){
+    //printf("%s, %d\n", __func__, str->index);
     int prevIndex = str->index;
     int number = 0;
     while (cur(str) >= '0' && cur(str) <= '9') {
@@ -210,7 +225,7 @@ Node* getDerivative(Node* node, char variableName){
 }
 
 Node* getOperatorDerivative(Node* node, char variableName){
-    Node* result;
+    Node* result = NULL;
     switch (node->data.operatorType){   
         case ADD:
             result = createOperatorNode(ADD);
@@ -232,9 +247,39 @@ Node* getOperatorDerivative(Node* node, char variableName){
             result->right->right = getDerivative(node->right, variableName);
             return result;
         case DIV:
-
+            result = createOperatorNode(DIV);
+            result->right = createOperatorNode(POW);
+            result->right->left = createNodeCopy(node->right);
+            result->right->right = createConstNode(2);
+            result->left = createOperatorNode(SUB);
+            result->left->left = createOperatorNode(MUL);
+            result->left->right = createOperatorNode(MUL);
+            result->left->left->left = getDerivative(node->left, variableName);
+            result->left->left->right = createNodeCopy(node->right);
+            result->left->right->left = createNodeCopy(node->left);
+            result->left->right->right = getDerivative(node->right, variableName);
+            return result;
         case POW:
-        
+            if (node->right->type == CONST_TYPE) {
+                if (node->right->data.constValue == 0) return createConstNode(0);
+                result = createOperatorNode(MUL);
+                result->left = createOperatorNode(POW);
+                result->left->left = createNodeCopy(node->left);
+                result->left->right = createConstNode(node->right->data.constValue - 1);
+                result->right = createOperatorNode(MUL);
+                result->right->left = createConstNode(node->right->data.constValue);
+                result->right->right = getDerivative(node->left, variableName);
+            }
+            else {
+                Node* tmp = createFunctionNode(EXP);
+                tmp->right = createOperatorNode(MUL);
+                tmp->right->left = createFunctionNode(LN);
+                tmp->right->left->right = createNodeCopy(node->left);
+                tmp->right->right = createNodeCopy(node->right);
+                result = getDerivative(tmp, variableName);
+                destroyNode(tmp);
+            }
+            return result;
         default:
             printErr("hell nah bro wtf do you want from me\n");
             return NULL;
@@ -242,20 +287,58 @@ Node* getOperatorDerivative(Node* node, char variableName){
 }
 
 Node* getFunctionDerivative(Node* node, char variableName){
+    //printExpression(stdout, node); putchar('\n');
     Node* result;
     switch (node->data.functionType){
         case EXP:
             result = createOperatorNode(MUL);
             result->left = createNodeCopy(node);
-            result->right = getDerivative(node, variableName);
+            result->right = getDerivative(node->right, variableName);
             return result;
         case LN:
             result = createOperatorNode(DIV);
-            result->left = getDerivative(node, variableName);
-            result->right = createNodeCopy(node);
+            result->left = getDerivative(node->right, variableName);
+            result->right = createNodeCopy(node->right);
+            return result;
+        case SIN:
+            result = createOperatorNode(MUL);
+            result->left = createFunctionNode(COS);
+            result->left->right = createNodeCopy(node->right);
+            result->right = getDerivative(node->right, variableName);
             return result;
         default:
-            printErr("I ain't even got a function for this one man what the hell\n");
+            printErr("I ain't even got a derivative for this one man what the hell\n");
             return NULL;
     }
 }
+
+void printNode(FILE* filePtr, Node* node){
+    if (node == NULL || filePtr == NULL) return;
+    switch (node->type){
+        case CONST_TYPE:
+            printf("%lg", node->data.constValue);
+            break;
+        case VARIABLE_TYPE:
+            putchar(node->data.variableName);
+            break;
+        case BINARY_OPERATOR:
+            putchar(operatorNames[node->data.operatorType]);
+            break;
+        case UNARY_FUNCTION:
+            printf("%s", functionNames[node->data.functionType]);
+            break;
+        default:
+            printErr("Erm whatthesigma\n");
+    }
+}
+
+void printExpression(FILE* filePtr, Node* node){
+    if (node == NULL || filePtr == NULL) return;
+    if (node->left != NULL && node->right != NULL) putchar('(');
+    if (node->left != NULL) printExpression(filePtr, node->left);
+    printNode(filePtr, node);
+    if (node->right != NULL) printExpression(filePtr, node->right);
+    if (node->left != NULL && node->right != NULL) putchar(')');
+}
+
+
